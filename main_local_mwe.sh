@@ -19,7 +19,7 @@
 #
 BUILD_NAME="graphworld"
 
-OUTPUT_PATH="/tmp/mwe"
+OUTPUT_PATH="./tmp/mwe"
 
 rm -rf "${OUTPUT_PATH}"
 mkdir -p ${OUTPUT_PATH}

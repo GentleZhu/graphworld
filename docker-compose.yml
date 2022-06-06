@@ -34,4 +34,4 @@ services:
       - /tmp:/tmp
       
       # Mount config on host to access gcloud credentials.
-      - ~/.config/gcloud:/root/.config/gcloud
+      - /shared/data2/qiz3/.config/gcloud:/root/.config/gcloud
