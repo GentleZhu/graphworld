@@ -14,11 +14,11 @@
 # limitations under the License.
 BUILD_NAME="graphworld"
 
-docker run -p 8888:8888 \
+docker run -p 8858:8858 \
   -v ${PWD}/src:/app \
-  -v /tmp:/tmp \
+  -v ${PWD}/tmp:/tmp \
   --entrypoint /opt/venv/bin/jupyter \
   ${BUILD_NAME}:latest \
-  notebook --allow-root --no-browser --port=8888 \
+  notebook --allow-root --no-browser --port=8858 \
   --notebook-dir="/app/notebooks" --ip=0.0.0.0 
   
