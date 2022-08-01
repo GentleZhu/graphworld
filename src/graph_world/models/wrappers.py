@@ -228,6 +228,7 @@ class NNNodeBenchmarker(Benchmarker):
                                                          pred_onehot,
                                                          multi_class='ovo'),
         'logloss': sklearn.metrics.log_loss(correct, pred)}
+    
     return results
 
   def train(self, data,
@@ -235,7 +236,7 @@ class NNNodeBenchmarker(Benchmarker):
             tuning_metric_is_loss: bool):
     losses = []
     best_val_metric = np.inf if tuning_metric_is_loss else -np.inf
-    test_metrics = None
+    #test_metrics = None
     best_val_metrics = None
     for i in range(self._epochs):
       losses.append(float(self.train_step(data)))
@@ -244,8 +245,8 @@ class NNNodeBenchmarker(Benchmarker):
           (not tuning_metric_is_loss and val_metrics[tuning_metric] > best_val_metric)):
         best_val_metric = val_metrics[tuning_metric]
         best_val_metrics = copy.deepcopy(val_metrics)
-        test_metrics = self.test(data, test_on_val=False)
-    return losses, test_metrics, best_val_metrics
+        #test_metrics = self.test(data, test_on_val=False)
+    return losses, best_val_metrics
 
   def Benchmark(self, element,
                 tuning_metric: str = None,
@@ -262,28 +263,35 @@ class NNNodeBenchmarker(Benchmarker):
     out.update(element)
     out['losses'] = None
     out['val_metrics'] = {}
-    out['test_metrics'] = {}
+    out['test_metrics'] = []
 
     if skipped:
       logging.info(f'Skipping benchmark for sample id {sample_id}')
       return out
 
-    train_mask, val_mask, test_mask = masks
+    train_mask, val_mask, test_mask = masks[0]
 
     self.SetMasks(train_mask, val_mask, test_mask)
 
     val_metrics = {}
-    test_metrics = {}
+    test_metrics = []
     losses = None
     try:
-      losses, test_metrics, val_metrics = self.train(
-        torch_data, tuning_metric=tuning_metric, tuning_metric_is_loss=tuning_metric_is_loss)
+        losses, val_metrics = self.train(torch_data[0], tuning_metric=tuning_metric, tuning_metric_is_loss=tuning_metric_is_loss)
+        for (data_i, mask_i) in zip(torch_data, masks):
+            train_mask, val_mask, test_mask = mask_i
+            self.SetMasks(train_mask, val_mask, test_mask)
+            test_res = self.test(data_i, test_on_val=False)
+            test_metrics.append(test_res)
+
     except Exception as e:
       logging.info(f'Failed to run for sample id {sample_id}')
       out['skipped'] = True
 
     out['losses'] = losses
-    out['test_metrics'].update(test_metrics)
+    for i in test_metrics:
+        out['test_metrics'].append({})
+        out['test_metrics'][-1].update(i)
     out['val_metrics'].update(val_metrics)
     return out
 

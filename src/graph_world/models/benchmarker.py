@@ -120,10 +120,12 @@ class BenchmarkGNNParDo(beam.DoFn):
 
   def process(self, element):
     output_data = {}
-    output_data.update(element['generator_config'])
+    for config in element['generator_config']:
+        for key, val in config.items():
+            output_data.setdefault(key, []).append(val)
     output_data['marginal_param'] = element['marginal_param']
     output_data['fixed_params'] = element['fixed_params']
-    output_data.update(element['metrics'])
+    output_data.update(element['metrics'][0])
     output_data['skipped'] = element['skipped']
     if 'target' in element:
       output_data['target'] = element['target']
@@ -147,7 +149,7 @@ class BenchmarkGNNParDo(beam.DoFn):
       if num_tuning_rounds == 1 or self._tuning_metric == '':
         benchmark_params_sample, h_params_sample = SampleModelConfig(benchmark_params,
                                                                      h_params)
-        benchmarker = benchmarker_class(element['generator_config'],
+        benchmarker = benchmarker_class(element['generator_config'][0],
                                         model_class,
                                         benchmark_params_sample,
                                         h_params_sample)
@@ -156,7 +158,6 @@ class BenchmarkGNNParDo(beam.DoFn):
                                                 tuning_metric_is_loss=self._tuning_metric_is_loss)
         val_metrics = benchmarker_out['val_metrics']
         test_metrics = benchmarker_out['test_metrics']
-
       else:
         configs = []
         val_metrics_list = []
@@ -194,7 +195,7 @@ class BenchmarkGNNParDo(beam.DoFn):
           else:
             benchmark_params_sample, h_params_sample = SampleModelConfig(benchmark_params,
                                                                          h_params)
-          benchmarker = benchmarker_class(element['generator_config'],
+          benchmarker = benchmarker_class(element['generator_config'][0],
                                           model_class,
                                           benchmark_params_sample,
                                           h_params_sample)
@@ -204,7 +205,6 @@ class BenchmarkGNNParDo(beam.DoFn):
           configs.append((benchmark_params_sample, h_params_sample))
           val_metrics_list.append(benchmarker_out['val_metrics'])
           test_metrics_list.append(benchmarker_out['test_metrics'])
-
         val_scores = [metrics[self._tuning_metric] for metrics in val_metrics_list]
         test_scores = [metrics[self._tuning_metric] for metrics in test_metrics_list]
         if self._tuning_metric_is_loss:
@@ -222,11 +222,11 @@ class BenchmarkGNNParDo(beam.DoFn):
         test_metrics = test_metrics_list[best_tuning_round]
 
       # Return benchmark data for next beam stage.
-
       for key, value in val_metrics.items():
         output_data[f'{benchmarker.GetModelName()}__val_{key}'] = value
-      for key, value in test_metrics.items():
-        output_data[f'{benchmarker.GetModelName()}__test_{key}'] = value
+      for metrics in test_metrics:
+        for key, value in metrics.items():
+          output_data.setdefault(f'{benchmarker.GetModelName()}__test_{key}', []).append(value)
 
 
       if benchmark_params_sample is not None:

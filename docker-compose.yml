@@ -31,7 +31,7 @@ services:
       - ${PWD}/src:/app
       
       # Map /tmp -> /tmp to output data for local testing
-      - ${PWD}/tmp:/tmp
+      - /tmp:/tmp
       
       # Mount config on host to access gcloud credentials.
-      - /shared/data2/qiz3/.config/gcloud:/root/.config/gcloud
+      - ~/.config/gcloud:/root/.config/gcloud

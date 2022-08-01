@@ -19,16 +19,17 @@
 #
 BUILD_NAME="graphworld"
 
-OUTPUT_PATH="/tmp/mwe/"
+OUTPUT_PATH="/tmp/mwe"
 
-#rm -rf "${OUTPUT_PATH}"
-#mkdir -p ${OUTPUT_PATH}
+rm -rf "${OUTPUT_PATH}"
+mkdir -p ${OUTPUT_PATH}
 
-echo $OUTPUT_PATH
-
-docker compose run \
+docker-compose run \
   --entrypoint "python3 /app/beam_benchmark_main.py \
   --output ${OUTPUT_PATH} \
   --gin_config=/app/configs/sbm_config_mwe.gin \
   --runner=DirectRunner" \
   ${BUILD_NAME}
+
+
+

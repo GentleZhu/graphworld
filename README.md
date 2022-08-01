@@ -1,5 +1,5 @@
 # GraphWorld
-fake
+
 Welcome! GraphWorld [(arxiv)](https://arxiv.org/abs/2203.00112) is a method and
 toolbox for graph learning researchers to systematically test new models on
 *synthetic* graph datasets.

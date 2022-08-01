@@ -53,3 +53,7 @@ cluster_size_slope/ParamSamplerSpec.max_val = 1.0
 power_exponent/ParamSamplerSpec.name = "power_exponent"
 power_exponent/ParamSamplerSpec.min_val = 0.2
 power_exponent/ParamSamplerSpec.max_val = 1.0
+
+ktrain/ParamSamplerSpec.name = "ktrain"
+ktrain/ParamSamplerSpec.min_val = 1.0
+ktrain/ParamSamplerSpec.max_val = 30.0

@@ -62,7 +62,6 @@ def entry(argv=None):
 
   gen_handler_wrapper = GeneratorBeamHandlerWrapper()
   gen_handler_wrapper.SetOutputPath(args.output)
-
   with beam.Pipeline(options=pipeline_options) as p:
     graph_samples = (
         p
@@ -87,7 +86,6 @@ def entry(argv=None):
      | 'Extract skipped sample ids' >> beam.Map(lambda el: el['sample_id'])
      | 'Write skipped text file' >> beam.io.WriteToText(
             os.path.join(args.output, 'skipped.txt')))
-
     dataframe_rows = (
         torch_data | 'Benchmark Simple GCN.' >> beam.ParDo(
         gen_handler_wrapper.handler.GetBenchmarkParDo()))

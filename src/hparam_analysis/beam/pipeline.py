@@ -59,7 +59,6 @@ def entry(argv=None):
   gin.parse_config_file(args.gin_config)
   hparam_handler = HparamBeamHandler(dataset_path=args.dataset_path,
                                      sim=args.sim)
-
   with beam.Pipeline(options=pipeline_options) as p:
     dataframe_rows = (
       p | 'Enumerate hyperparameter gridpoints.' >> beam.Create(

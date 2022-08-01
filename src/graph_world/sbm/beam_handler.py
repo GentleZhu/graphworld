@@ -46,38 +46,43 @@ class SampleSbmDoFn(GeneratorConfigSampler, beam.DoFn):
     self._AddSamplerFn('num_clusters', self._SampleUniformInteger)
     self._AddSamplerFn('cluster_size_slope', self._SampleUniformFloat)
     self._AddSamplerFn('power_exponent', self._SampleUniformFloat)
+    self._AddSamplerFn('ktrain', self._SampleUniformInteger)
 
-  def process(self, sample_id):
+  def process(self, sample_id, gen_times=5):
     """Sample and save SMB outputs given a configuration filepath.
     """
     # Avoid save_main_session in Pipeline args so the controller doesn't
     # have to import the same libraries as the workers which may be using
     # a custom container. The import will execute once then the sys.modeules
     # will be referenced to further calls.
+    data = []
+    generator_configs, marginal_params, fixed_params = [], [], []
+    for i in range(gen_times):
+        generator_config, marginal_param, fixed_param = self.SampleConfig(self._marginal)
+        generator_config['generator_name'] = 'StochasticBlockModel'
 
-    generator_config, marginal_param, fixed_params = self.SampleConfig(self._marginal)
-    generator_config['generator_name'] = 'StochasticBlockModel'
-
-    data = GenerateStochasticBlockModelWithFeatures(
-      num_vertices=generator_config['nvertex'],
-      num_edges=generator_config['nvertex'] * generator_config['avg_degree'],
-      pi=MakePi(generator_config['num_clusters'], generator_config['cluster_size_slope']),
-      prop_mat=MakePropMat(generator_config['num_clusters'], generator_config['p_to_q_ratio']),
-      num_feature_groups=generator_config['num_clusters'],
-      feature_group_match_type=MatchType.GROUPED,
-      feature_center_distance=generator_config['feature_center_distance'],
-      feature_dim=generator_config['feature_dim'],
-      edge_center_distance=generator_config['edge_center_distance'],
-      edge_feature_dim=generator_config['edge_feature_dim'],
-      out_degs=np.random.power(generator_config['power_exponent'],
-                               generator_config['nvertex']),
-      normalize_features=self._normalize_features
-    )
+        new_data = GenerateStochasticBlockModelWithFeatures(
+          num_vertices=generator_config['nvertex'],
+          num_edges=generator_config['nvertex'] * generator_config['avg_degree'],
+          pi=MakePi(generator_config['num_clusters'], generator_config['cluster_size_slope']),
+          prop_mat=MakePropMat(generator_config['num_clusters'], generator_config['p_to_q_ratio']),
+          num_feature_groups=generator_config['num_clusters'],
+          feature_group_match_type=MatchType.GROUPED,
+          feature_center_distance=generator_config['feature_center_distance'],
+          feature_dim=generator_config['feature_dim'],
+          edge_center_distance=generator_config['edge_center_distance'],
+          edge_feature_dim=generator_config['edge_feature_dim'],
+          out_degs=np.random.power(generator_config['power_exponent'],
+                                   generator_config['nvertex']),
+          normalize_features=self._normalize_features
+        )
+        data.append(new_data)
+        generator_configs.append(generator_config)       
 
     yield {'sample_id': sample_id,
-           'marginal_param': marginal_param,
-           'fixed_params': fixed_params,
-           'generator_config': generator_config,
+           'marginal_param': None, # marginal_params,
+           'fixed_params': [], # fixed_params,
+           'generator_config': generator_configs,
            'data': data}
 
 
@@ -135,10 +140,12 @@ class ComputeSbmGraphMetrics(beam.DoFn):
 
   def process(self, element):
     out = element
-    out['metrics'] = GraphMetrics(element['data'].graph)
-    out['metrics'].update(NodeLabelMetrics(element['data'].graph,
-                                           element['data'].graph_memberships,
-                                           element['data'].node_features))
+    out['metrics'] = []
+    d_len = len(element['data'])
+    for i in range(d_len):
+        tmp = GraphMetrics(element['data'][i].graph)
+        tmp.update(NodeLabelMetrics(element['data'][i].graph, element['data'][i].graph_memberships, element['data'][i].node_features))
+        out['metrics'].append(tmp)
     yield out
 
 
@@ -151,7 +158,7 @@ class ConvertToTorchGeoDataParDo(beam.DoFn):
   def process(self, element):
     sample_id = element['sample_id']
     sbm_data = element['data']
-
+    self._ktrain = element['generator_config'][0]['ktrain']
     out = {
       'sample_id': sample_id,
       'metrics' : element['metrics'],
@@ -164,21 +171,18 @@ class ConvertToTorchGeoDataParDo(beam.DoFn):
     }
 
     try:
-      torch_data = sbm_data_to_torchgeo_data(sbm_data)
+      torch_data = [sbm_data_to_torchgeo_data(i) for i in sbm_data]
       out['torch_data'] = torch_data
-      out['gt_data'] = sbm_data.graph
+      out['gt_data'] = [i.graph for i in sbm_data]
 
-      torchgeo_stats = {
-        'nodes': torch_data.num_nodes,
-        'edges': torch_data.num_edges,
-        'average_node_degree': torch_data.num_edges / torch_data.num_nodes,
-        # 'contains_isolated_nodes': torchgeo_data.contains_isolated_nodes(),
-        # 'contains_self_loops': torchgeo_data.contains_self_loops(),
-        # 'undirected': bool(torchgeo_data.is_undirected())
-      }
+      torchgeo_stats = [{
+        'nodes': i.num_nodes,
+        'edges': i.num_edges,
+        'average_node_degree': i.num_edges / i.num_nodes,
+      } for i in torch_data]
       stats_object_name = os.path.join(self._output_path, '{0:05}_torch_stats.txt'.format(sample_id))
       with beam.io.filesystems.FileSystems.create(stats_object_name, 'text/plain') as f:
-        buf = bytes(json.dumps(torchgeo_stats), 'utf-8')
+        buf = bytes(json.dumps(torchgeo_stats[0]), 'utf-8')
         f.write(buf)
         f.close()
     except:
@@ -189,12 +193,14 @@ class ConvertToTorchGeoDataParDo(beam.DoFn):
       return
 
     try:
-      out['masks'] = get_kclass_masks(sbm_data, k_train=self._ktrain,
-                                      k_val=self._ktuning)
+      out['masks'] = []
+      for data_i, config_i in zip(sbm_data, element['generator_config']):
+          new_mask = get_kclass_masks(data_i, k_train=config_i['ktrain'], k_val=self._ktuning)
+          out['masks'].append(new_mask)
 
       masks_object_name = os.path.join(self._output_path, '{0:05}_masks.txt'.format(sample_id))
       with beam.io.filesystems.FileSystems.create(masks_object_name, 'text/plain') as f:
-        for mask in out['masks']:
+        for mask in out['masks'][0]:
           np.savetxt(f, np.atleast_2d(mask.numpy()), fmt='%i', delimiter=' ')
         f.close()
     except:
