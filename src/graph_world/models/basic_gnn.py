@@ -110,6 +110,24 @@ class BasicGNN(torch.nn.Module):
         x = self.lin(x) if hasattr(self, 'lin') else x
         return x
 
+    def output(self, x: Tensor, edge_index: Adj, *args, **kwargs) -> Tensor:
+        xs: List[Tensor] = []
+        for i in range(self.num_layers):
+            x = self.convs[i](x, edge_index, *args, **kwargs)
+            if self.norms is not None:
+                x = self.norms[i](x)
+            if self.act is not None:
+                x = self.act(x)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+            if hasattr(self, 'jk'):
+                xs.append(x)
+
+        #x = self.jk(xs) if hasattr(self, 'jk') else x
+        #x = self.lin(x) if hasattr(self, 'lin') else x
+        assert hasattr(self, 'lin')
+        
+        return x
+
     def __repr__(self) -> str:
         return (f'{self.__class__.__name__}({self.in_channels}, '
                 f'{self.out_channels}, num_layers={self.num_layers})')
