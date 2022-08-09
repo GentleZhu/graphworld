@@ -281,9 +281,8 @@ class NNNodeBenchmarker(Benchmarker):
         for (data_i, mask_i) in zip(torch_data, masks):
             train_mask, val_mask, test_mask = mask_i
             self.SetMasks(train_mask, val_mask, test_mask)
-            test_res = self.test(data_i, test_on_val=False)
+            test_res = self.test(data_i, test_on_val=False) 
             test_metrics.append(test_res)
-
     except Exception as e:
       logging.info(f'Failed to run for sample id {sample_id}')
       out['skipped'] = True

@@ -1,0 +1,58 @@
+Exception in thread Thread-16:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.9/site-packages/wandb/apis/normalize.py", line 25, in wrapper
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.9/site-packages/wandb/sdk/internal/internal_api.py", line 1634, in upload_urls
+    run_obj = query_result["model"]["bucket"]
+TypeError: 'NoneType' object is not subscriptable
+During handling of the above exception, another exception occurred:
+Traceback (most recent call last):
+  File "/usr/local/Cellar/python@3.9/3.9.6/Frameworks/Python.framework/Versions/3.9/lib/python3.9/threading.py", line 973, in _bootstrap_inner
+    self.run()
+  File "/usr/local/lib/python3.9/site-packages/wandb/filesync/upload_job.py", line 62, in run
+    success = self.push()
+  File "/usr/local/lib/python3.9/site-packages/wandb/filesync/upload_job.py", line 113, in push
+    _, upload_headers, result = self._api.upload_urls(project, [self.save_name])
+  File "/usr/local/lib/python3.9/site-packages/wandb/apis/normalize.py", line 61, in wrapper
+    raise CommError(message, err).with_traceback(sys.exc_info()[2])
+  File "/usr/local/lib/python3.9/site-packages/wandb/apis/normalize.py", line 25, in wrapper
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.9/site-packages/wandb/sdk/internal/internal_api.py", line 1634, in upload_urls
+    run_obj = query_result["model"]["bucket"]
+wandb.errors.CommError: 'NoneType' object is not subscriptable
+results.ndjson-00000-of-00010
+results.ndjson-00001-of-00010
+results.ndjson-00002-of-00010
+results.ndjson-00003-of-00010
+results.ndjson-00004-of-00010
+results.ndjson-00005-of-00010
+results.ndjson-00006-of-00010
+results.ndjson-00007-of-00010
+results.ndjson-00008-of-00010
+results.ndjson-00009-of-00010
+0     [8.185896915908849, 9.984063704324031, 4.89619...
+1     [4.380554349852165, 8.106124937040157, 1.49621...
+2     [4.045699406975736, 5.273796974906328, 9.86037...
+3     [7.280297927747809, 8.263635854720803, 5.80992...
+4     [7.424776994374206, 1.8240194388762092, 5.7908...
+                            ...
+95    [7.629319580666295, 7.171876900120786, 7.63194...
+96    [6.303571310225526, 8.370769897327405, 5.48700...
+97    [1.0423956753219792, 4.889892110680499, 2.6290...
+98    [1.1968385490715232, 9.457985592292227, 8.7161...
+99    [7.1457188381563945, 4.02652897053675, 3.79885...
+Name: p_to_q_ratio, Length: 1000, dtype: object
+0      1.788716
+1      2.416871
+2      0.291328
+3      0.067830
+4      0.180779
+        ...
+95     2.017947
+96     3.694515
+97    13.115089
+98     5.542653
+99     0.338503
+Name: GCN__val_logloss, Length: 1000, dtype: float64
+1000
+118

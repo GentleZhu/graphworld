@@ -78,7 +78,6 @@ class SampleSbmDoFn(GeneratorConfigSampler, beam.DoFn):
         )
         data.append(new_data)
         generator_configs.append(generator_config)       
-
     yield {'sample_id': sample_id,
            'marginal_param': None, # marginal_params,
            'fixed_params': [], # fixed_params,
@@ -171,7 +170,10 @@ class ConvertToTorchGeoDataParDo(beam.DoFn):
     }
 
     try:
-      torch_data = [sbm_data_to_torchgeo_data(i) for i in sbm_data]
+      torch_data = []
+      for i in sbm_data:
+          torch_data_i = sbm_data_to_torchgeo_data(i)
+          torch_data.append(torch_data_i)
       out['torch_data'] = torch_data
       out['gt_data'] = [i.graph for i in sbm_data]
 
